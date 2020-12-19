@@ -6,6 +6,19 @@ void start_ncurses(){
     start_color();
     curs_set(1);
     timeout(0);
+
+    init_pair(1, COLOR_CYAN, COLOR_BLACK);
+    init_pair(2, COLOR_GREEN, COLOR_BLACK);
+    init_pair(3, COLOR_RED, COLOR_BLACK);
+    init_pair(4, COLOR_BLUE, COLOR_BLACK);
+    init_pair(5, COLOR_MAGENTA, COLOR_BLACK);
+    init_pair(6, COLOR_YELLOW, COLOR_BLACK);
+    init_pair(7, COLOR_WHITE, COLOR_BLACK);
+    init_pair(8, COLOR_WHITE, COLOR_BLACK);
+    init_pair(9, COLOR_RED, COLOR_WHITE);
+    init_pair(10, COLOR_RED, COLOR_WHITE);
+    init_pair(11, COLOR_BLACK, COLOR_RED);
+
     cbreak();
     noecho();
     keypad(stdscr, TRUE);
@@ -29,17 +42,26 @@ void drawBoard(board *b){
             idx = i * b->w + j;
             switch (b->cover[idx]){
                 case CELL_COVER:
-                    addch('#');
+                    addch(ACS_CKBOARD);
                     break;
                 case CELL_FLAG:
+                    attron(COLOR_PAIR(10));
                     addch('F');
+                    attroff(COLOR_PAIR(10));
                     break;
                 case CELL_EXPLODE:
+                    attron(COLOR_PAIR(11));
                     addch('X');
+                    attroff(COLOR_PAIR(11));
                     break;
-                case CELL_CLEAR:
-                    if (b->hints[idx]) addch('0'+b->hints[idx]);
-                    else addch('.');
+                case CELL_CLEAR: ;
+                    int hint = b->hints[idx];
+                    if (hint) {
+                        attron(COLOR_PAIR(hint));
+                        addch('0' + hint);
+                        attroff(COLOR_PAIR(hint));
+                    }
+                    else addch(' ');
                     break;
             }
         }
