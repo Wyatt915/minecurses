@@ -4,6 +4,8 @@
 
 #include "board.h"
 
+//-----------------------------------------[Board Creation]-----------------------------------------
+
 void countNeighbors(size_t w, size_t h, uint8_t * field, uint8_t * count){
     memset(count, 0x0, w*h*sizeof(uint8_t));
     for (int i = 0; i < h; i++){
@@ -21,13 +23,12 @@ void countNeighbors(size_t w, size_t h, uint8_t * field, uint8_t * count){
     }
 }
 
-
 void automata(size_t w, size_t h, uint8_t * field){
     uint8_t * count = malloc(w * h * sizeof(uint8_t));
     countNeighbors(w, h, field, count);
     for (int i = 0; i < h; i++){
         for (int j = 0; j < w; j++){
-            field[i * w + j] = count[i*w+j] >= 5 || count[i*w+j] == 0 ? 1 : 0;
+            field[i*w+j] = count[i*w+j] >= 5 || count[i*w+j] == 0 ? 1 : 0;
         }
     }
     free(count);
@@ -38,6 +39,7 @@ void addMines(board *b, size_t maxMines){
     size_t w = b -> w;
     size_t h = b -> h;
     size_t cells = w*h;
+    b -> numMines = 0;
     int mineProb = ((float) maxMines / (float) cells) * 1000;
 
     for (size_t i = 0; i < cells; i++){
@@ -60,14 +62,35 @@ void addMines(board *b, size_t maxMines){
 }
 
 
-board * createBoard(size_t w, size_t h, size_t maxMines){
+void addHints(board *b){
+    countNeighbors(b->w, b->h, b->mines, b->hints);
+    for (size_t i = 0; i < b->w * b->h; i++){
+        if (b->mines[i]) b->hints[i] = 0;
+    }
+}
+
+
+/**
+ * Creates the board as soon as the player selects the first cell. The first
+ * cell will never be a mine.
+ * @param w The width of the board
+ * @param h The height of the board
+ * @param x, y The location of the player's first move
+ * @param maxMines the approximate number of mines to be placed
+ */
+board * createBoard(size_t w, size_t h, size_t x, size_t y, size_t maxMines){
     board * theBoard = calloc(1, sizeof(board));
     theBoard -> w = w;
     theBoard -> h = h;
     theBoard -> mines = calloc(w*h, sizeof(uint8_t));
     theBoard -> hints = calloc(w*h, sizeof(uint8_t));
     addMines(theBoard, maxMines);
-    countNeighbors(w, h, theBoard -> mines, theBoard -> hints);
+    // If there is a mine at (x, y), scrap the whole board and try again.
+    while (theBoard->mines[y*w+x]) {
+        memset(theBoard->mines, 0x0, w * h * sizeof(uint8_t));
+        addMines(theBoard, maxMines);
+    }
+    addHints(theBoard);
     return theBoard;
 }
 
@@ -77,13 +100,67 @@ void freeBoard(board* b){
     free(b);
 }
 
+//---------------------------------------[Player Interaction]---------------------------------------
+
+
+/**
+ * Implements a 4-way flood fill.
+ * */
+void floodFill(board *b, int x, int y){
+    //return if we are out of bounds.
+    if (x < 0 || y < 0 || x >= b->w || y >= b->h) return;
+
+    size_t idx = y * b->w + x;
+    // Check if we've been here before.
+    if (b->cover[idx] == CELL_CLEAR) return;
+    // No that we're here for the first time, we need to clear the cell.
+    b->cover[idx] = CELL_CLEAR;
+    // Stop the flood fill once a hint is found
+    if (b->hints[idx]) return;
+    // Otherwise, continue flood
+    floodFill(b, x-1, y);
+    floodFill(b, x+1, y);
+    floodFill(b, x, y-1);
+    floodFill(b, x, y+1);
+}
+
+int clearCell(board *b, int x, int y){
+    size_t idx = y * b->w + x;
+    // if the cell is flagged, nothing happens
+    if (b->cover[idx] == CELL_FLAG) return ACTION_SAFE;
+    if (b->mines[idx]){
+        b->cover[idx] = CELL_EXPLODE;
+        return ACTION_DEAD;
+    }
+    // If the uncoverd area is not adjacent to a mine, uncover all adjacent
+    // areas bounded by cells with hints
+    if (!b->hints[idx]) floodFill(b, x, y);
+    else b->cover[idx] = CELL_CLEAR;
+    return ACTION_SAFE;
+}
+
+/**
+ * Toggle whether or not a cell is flagged.
+ */
+int flagCell(board* b, int x, int y){
+    size_t idx = y * b->w + x;
+    // If the cell has been cleared, do nothind
+    if (b->cover[idx] == CELL_CLEAR) return ACTION_SAFE;
+    b->cover[idx] = b->cover[idx] == CELL_COVER ? CELL_FLAG : CELL_COVER;
+}
+
 void printBoard(board* b){
     size_t w = b -> w;
     size_t h = b -> h;
     uint8_t * mines = b -> mines;
+    uint8_t * hints = b -> hints;
     for (size_t i = 0; i < h; i++){
         for (size_t j = 0; j < w; j++){
             mines[i * w + j] ? putchar('#') : putchar('.');
+        }
+        putchar(' '); putchar(' '); putchar(' '); putchar(' ');
+        for (size_t j = 0; j < w; j++){
+            hints[i*w+j] ? putchar(hints[i*w+j] + '0') : putchar('.');
         }
         putchar('\n');
     }
