@@ -48,12 +48,8 @@ void addMines(board *b, size_t maxMines){
         }
     }
 
-    for (size_t i = 0; i < cells; i++){
-        b -> numMines += mines[i];
-    }
-
-    printBoard(b);
     automata(w, h, b -> mines);
+
     b -> numMines = 0;
     for (size_t i = 0; i < cells; i++){
         b -> numMines += mines[i];
@@ -75,22 +71,17 @@ void addHints(board *b){
  * cell will never be a mine.
  * @param w The width of the board
  * @param h The height of the board
- * @param x, y The location of the player's first move
  * @param maxMines the approximate number of mines to be placed
  */
-board * createBoard(size_t w, size_t h, size_t x, size_t y, size_t maxMines){
+board * createBoard(size_t w, size_t h, size_t maxMines){
     board * theBoard = calloc(1, sizeof(board));
     theBoard -> w = w;
     theBoard -> h = h;
+    theBoard -> isFirstMove = true;
+    theBoard -> maxMines = maxMines;
     theBoard -> mines = calloc(w*h, sizeof(uint8_t));
     theBoard -> hints = calloc(w*h, sizeof(uint8_t));
-    addMines(theBoard, maxMines);
-    // If there is a mine at (x, y), scrap the whole board and try again.
-    while (theBoard->mines[y*w+x]) {
-        memset(theBoard->mines, 0x0, w * h * sizeof(uint8_t));
-        addMines(theBoard, maxMines);
-    }
-    addHints(theBoard);
+    theBoard -> cover = calloc(w*h, sizeof(uint8_t));
     return theBoard;
 }
 
@@ -126,6 +117,16 @@ void floodFill(board *b, int x, int y){
 
 int clearCell(board *b, int x, int y){
     size_t idx = y * b->w + x;
+    // Check if this is the first move
+    if (b->isFirstMove){
+        b->isFirstMove = false;
+        // If there is a mine at (x, y), scrap the whole board and try again.
+        do {
+            memset(b->mines, 0x0, b->w * b->h * sizeof(uint8_t));
+            addMines(b, b->maxMines);
+        } while (b->mines[idx]);
+        addHints(b);
+    }
     // if the cell is flagged, nothing happens
     if (b->cover[idx] == CELL_FLAG) return ACTION_SAFE;
     if (b->mines[idx]){

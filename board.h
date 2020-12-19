@@ -2,6 +2,7 @@
 #define BOARD_H
 
 #include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
 
 //Gives the ability to treat a 1d array as a 2d array
@@ -22,9 +23,11 @@ typedef struct {
     uint8_t *hints; // Array of size w*h. Contains all digits.
     uint8_t *cover; // Array of size w*h. Determines the state of each cell.
     size_t numMines;
+    size_t maxMines;
+    bool isFirstMove;
 } board;
 
-board * createBoard(size_t w, size_t h, size_t x, size_t y, size_t maxMines);
+board * createBoard(size_t w, size_t h, size_t maxMines);
 void freeBoard(board*);
 
 int clearCell(board* b, int x, int y);
