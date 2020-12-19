@@ -66,6 +66,19 @@ void drawBoard(board *b){
             }
         }
     }
+    if (b->isDead){
+        for (size_t i = 0; i < b->h; i++){
+            for(size_t j = 0; j < b->w; j++){
+                idx = i * b->w + j;
+                move(i+yoff, j+xoff);
+                if (b->mines[idx] && b->cover[idx] != CELL_EXPLODE){
+                    attron(COLOR_PAIR(11));
+                    addch('*');
+                    attroff(COLOR_PAIR(11));
+                }
+            }
+        }
+    }
     refresh();
 }
 
@@ -78,7 +91,7 @@ void play(board* b){
     cury = yoff;
     curx = xoff;
     int result = ACTION_SAFE;
-    while ((c = getch()) != 'q'){
+    while (!gameOver(b) && (c = getch()) != 'q'){
         switch (c){
             case KEY_DOWN:
                 if (cury-yoff < b->h - 1) cury++;
@@ -102,5 +115,11 @@ void play(board* b){
                 break;
         }
         move(cury, curx);
+    }
+    if (gameOver(b)){
+        move(0,0);
+        if (b->isDead) addstr("You Lost.");
+        else addstr("You Won!!");
+        while ((c = getch()) != 'q'){}
     }
 }

@@ -78,6 +78,7 @@ board * createBoard(size_t w, size_t h, size_t maxMines){
     theBoard -> w = w;
     theBoard -> h = h;
     theBoard -> isFirstMove = true;
+    theBoard -> isDead = false;
     theBoard -> maxMines = maxMines;
     theBoard -> mines = calloc(w*h, sizeof(uint8_t));
     theBoard -> hints = calloc(w*h, sizeof(uint8_t));
@@ -131,6 +132,7 @@ int clearCell(board *b, int x, int y){
     if (b->cover[idx] == CELL_FLAG) return ACTION_SAFE;
     if (b->mines[idx]){
         b->cover[idx] = CELL_EXPLODE;
+        b->isDead = true;
         return ACTION_DEAD;
     }
     // If the uncoverd area is not adjacent to a mine, uncover all adjacent
@@ -148,6 +150,16 @@ int flagCell(board* b, int x, int y){
     // If the cell has been cleared, do nothind
     if (b->cover[idx] == CELL_CLEAR) return ACTION_SAFE;
     b->cover[idx] = b->cover[idx] == CELL_COVER ? CELL_FLAG : CELL_COVER;
+}
+
+bool gameOver(board* b){
+    if (b->isFirstMove) return false;
+    if (b->isDead) return true;
+    // If every mine is flagged, we win!
+    for (size_t i = 0; i < b->w * b->h; i++){
+        if (b->mines[i] && !(b->cover[i] == CELL_FLAG)) return false;
+    }
+    return true;
 }
 
 void printBoard(board* b){

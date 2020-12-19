@@ -25,6 +25,7 @@ typedef struct {
     size_t numMines;
     size_t maxMines;
     bool isFirstMove;
+    bool isDead;
 } board;
 
 board * createBoard(size_t w, size_t h, size_t maxMines);
@@ -33,7 +34,7 @@ void freeBoard(board*);
 int clearCell(board* b, int x, int y);
 int flagCell(board* b, int x, int y);
 int unflagCell(board* b, int x, int y);
-
+bool gameOver(board*);
 void printBoard(board*);
 
 
