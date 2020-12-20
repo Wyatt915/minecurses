@@ -105,10 +105,10 @@ void floodFill(board *b, int x, int y){
     size_t idx = y * b->w + x;
     // Check if we've been here before.
     if (b->cover[idx] == CELL_CLEAR) return;
+    // Stop the flood fill once a mine is found
+    if (b->mines[idx]) return;
     // No that we're here for the first time, we need to clear the cell.
     b->cover[idx] = CELL_CLEAR;
-    // Stop the flood fill once a hint is found
-    if (b->hints[idx]) return;
     // Otherwise, continue flood
     floodFill(b, x-1, y);
     floodFill(b, x+1, y);
